@@ -394,6 +394,8 @@ export function recordUpstreamEndpointFailure(input: {
     wantsContinuationAwareResponses?: boolean;
   };
 }): UpstreamEndpointRuntimeMemoryWrite | null {
+  if (input.downstreamFormat === 'responses') return null;
+
   const capabilityProfile = buildEndpointCapabilityProfile({
     modelName: input.modelName,
     requestedModelHint: input.requestedModelHint,

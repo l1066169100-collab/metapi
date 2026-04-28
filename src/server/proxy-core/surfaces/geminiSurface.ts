@@ -1181,7 +1181,7 @@ export async function geminiProxyRoute(app: FastifyInstance) {
             account: selected.account,
           },
           actualModel,
-          'openai',
+          'responses',
           requestedModel,
           {
             hasNonImageFileInput,
@@ -1191,7 +1191,7 @@ export async function geminiProxyRoute(app: FastifyInstance) {
         const endpointRuntimeContext = {
           siteId: selected.site.id,
           modelName: actualModel,
-          downstreamFormat: 'openai' as const,
+          downstreamFormat: 'responses' as const,
           requestedModelHint: requestedModel,
           requestCapabilities: {
             hasNonImageFileInput,

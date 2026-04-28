@@ -57,7 +57,7 @@ describe('upstreamEndpointDerivation', () => {
       },
     );
 
-    expect(order).toEqual(['chat', 'responses', 'messages']);
+    expect(order).toEqual(['chat', 'messages', 'responses']);
   });
 
   it('keeps explicit openai platforms on same-protocol-first ordering even for claude-family models', async () => {

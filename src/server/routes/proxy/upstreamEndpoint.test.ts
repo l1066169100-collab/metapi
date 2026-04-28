@@ -256,7 +256,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
     expect(order).toEqual(['responses']);
   });
 
-  it('derives responses-first candidates for codex oauth hints without surface-local reordering', async () => {
+  it('derives same-protocol-first candidates for codex oauth hints without surface-local reordering', async () => {
     const order = await resolveUpstreamEndpointCandidates(
       {
         ...baseContext,
@@ -271,7 +271,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       },
     );
 
-    expect(order).toEqual(['responses', 'chat', 'messages']);
+    expect(order).toEqual(['chat', 'messages', 'responses']);
   });
 
   it('prefers document-capable endpoints when downstream content contains non-image files', async () => {
