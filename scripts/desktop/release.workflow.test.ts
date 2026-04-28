@@ -3,29 +3,30 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('release workflow', () => {
-  it('builds macOS arm64 and x64 on dedicated runners and verifies packaged app architecture', () => {
+  it('builds a linux amd64 server image tarball as the release artifact', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/release.yml'), 'utf8');
 
-    expect(workflow).toContain('runner: macos-15-intel');
-    expect(workflow).toContain('runner: macos-15');
-    expect(workflow).toContain('expectedMacArch: x64');
-    expect(workflow).toContain('expectedMacArch: arm64');
-    expect(workflow).toContain('Verify packaged macOS architecture');
-    expect(workflow).toContain('node scripts/desktop/verifyMacArchitecture.mjs');
+    expect(workflow).toContain('name: Build Server Image (linux-amd64)');
+    expect(workflow).toContain('--platform linux/amd64');
+    expect(workflow).toContain('--output type=docker,dest=metapi-linux-amd64.tar');
+    expect(workflow).toContain('gzip -f metapi-linux-amd64.tar');
+    expect(workflow).toContain('metapi-linux-amd64.tar.gz');
   });
 
-  it('uploads Linux desktop artifacts for AppImage, deb, and rpm packages', () => {
+  it('publishes the server image tarball to the GitHub release', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/release.yml'), 'utf8');
 
-    expect(workflow).toContain('release/*.AppImage');
-    expect(workflow).toContain('release/*.deb');
-    expect(workflow).toContain('release/*.rpm');
+    expect(workflow).toContain('name: Download server image artifact');
+    expect(workflow).toContain('name: metapi-server-image-linux-amd64-${{ github.sha }}');
+    expect(workflow).toContain('files: release-assets/metapi-linux-amd64.tar.gz');
   });
 
-  it('installs rpm tooling on Linux runners before packaging Fedora desktop artifacts', () => {
+  it('pushes the linux amd64 server image to ghcr', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/release.yml'), 'utf8');
 
-    expect(workflow).toContain("if: runner.os == 'Linux'");
-    expect(workflow).toContain('sudo apt-get install --no-install-recommends -y rpm');
+    expect(workflow).toContain('name: Publish Docker Image (linux-amd64)');
+    expect(workflow).toContain('registry: ghcr.io');
+    expect(workflow).toContain('platforms: linux/amd64');
+    expect(workflow).toContain('IMAGE_NAME: ghcr.io/${{ github.repository }}');
   });
 });
