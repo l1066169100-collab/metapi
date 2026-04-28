@@ -103,6 +103,12 @@ function preferredEndpointOrder(
   }
 
   if (platform === 'openai') {
+    if (downstreamFormat === 'responses') {
+      return ['responses', 'chat', 'messages'];
+    }
+    if (downstreamFormat === 'openai') {
+      return ['chat', 'responses', 'messages'];
+    }
     return ['responses', 'chat', 'messages'];
   }
 
@@ -116,7 +122,7 @@ function preferredEndpointOrder(
 
   if (downstreamFormat === 'responses') {
     if (preferMessagesForClaudeModel) {
-      return ['messages', 'chat', 'responses'];
+      return ['responses', 'messages', 'chat'];
     }
     return ['responses', 'chat', 'messages'];
   }
@@ -126,7 +132,7 @@ function preferredEndpointOrder(
   }
 
   if (downstreamFormat === 'openai' && preferMessagesForClaudeModel) {
-    return ['messages', 'chat', 'responses'];
+    return ['chat', 'messages', 'responses'];
   }
 
   const base = ['chat', 'messages', 'responses'] as UpstreamEndpoint[];
@@ -201,7 +207,10 @@ export async function resolveUpstreamEndpointCandidates(
     if (downstreamFormat === 'responses') {
       return finalizeCandidates(['responses', 'messages', 'chat']);
     }
-    return finalizeCandidates(['messages', 'chat', 'responses']);
+    if (downstreamFormat === 'claude') {
+      return finalizeCandidates(['messages', 'chat', 'responses']);
+    }
+    return finalizeCandidates(['chat', 'messages', 'responses']);
   }
 
   const preferred = preferredEndpointOrder(

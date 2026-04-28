@@ -101,10 +101,10 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'claude-haiku-4-5-20251001',
       'responses',
     );
-    expect(claudeResponsesOrder).toEqual(['messages', 'chat', 'responses']);
+    expect(claudeResponsesOrder).toEqual(['responses', 'messages', 'chat']);
   });
 
-  it('prioritizes messages-first for claude-family models on openai downstream', async () => {
+  it('keeps same-protocol first for claude-family models on openai downstream', async () => {
     fetchModelPricingCatalogMock.mockResolvedValue({
       models: [
         {
@@ -124,7 +124,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'openai',
     );
 
-    expect(order).toEqual(['messages', 'chat', 'responses']);
+    expect(order).toEqual(['chat', 'messages', 'responses']);
 
     const aliasedOrder = await resolveUpstreamEndpointCandidates(
       {
@@ -136,7 +136,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'claude-haiku-4-5-20251001',
     );
 
-    expect(aliasedOrder).toEqual(['messages', 'chat', 'responses']);
+    expect(aliasedOrder).toEqual(['chat', 'messages', 'responses']);
   });
 
   it('keeps explicit platform priority rules', async () => {
@@ -148,7 +148,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'gpt-5.3',
       'openai',
     );
-    expect(openaiOrder).toEqual(['responses', 'chat', 'messages']);
+    expect(openaiOrder).toEqual(['chat', 'responses', 'messages']);
 
     const openaiResponsesOrder = await resolveUpstreamEndpointCandidates(
       {
@@ -168,7 +168,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'claude-opus-4-6',
       'openai',
     );
-    expect(openaiClaudeOrder).toEqual(['responses', 'chat', 'messages']);
+    expect(openaiClaudeOrder).toEqual(['chat', 'responses', 'messages']);
 
     const antigravityOrder = await resolveUpstreamEndpointCandidates(
       {
@@ -671,7 +671,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
     expect(order).toEqual(['responses', 'messages']);
   });
 
-  it('keeps openai platform responses-first even when the catalog only advertises generic openai/chat support', async () => {
+  it('keeps openai downstream chat-first even when the catalog only advertises generic openai/chat support', async () => {
     fetchModelPricingCatalogMock.mockResolvedValue({
       models: [
         {
@@ -691,10 +691,10 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'openai',
     );
 
-    expect(order).toEqual(['responses', 'chat', 'messages']);
+    expect(order).toEqual(['chat', 'responses', 'messages']);
   });
 
-  it('keeps anyrouter messages-first special case', async () => {
+  it('keeps anyrouter same-protocol-first special case', async () => {
     const openaiOrder = await resolveUpstreamEndpointCandidates(
       {
         ...baseContext,
@@ -703,7 +703,7 @@ describe('resolveUpstreamEndpointCandidates', () => {
       'claude-opus-4-6',
       'openai',
     );
-    expect(openaiOrder).toEqual(['messages', 'chat', 'responses']);
+    expect(openaiOrder).toEqual(['chat', 'messages', 'responses']);
 
     const claudeOrder = await resolveUpstreamEndpointCandidates(
       {
