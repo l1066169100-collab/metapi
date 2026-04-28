@@ -88,8 +88,6 @@ function preferredEndpointOrder(
   hints?: EndpointDerivationHints,
 ): UpstreamEndpoint[] {
   const platform = normalizePlatformName(sitePlatform);
-  const oauthProvider = asTrimmedString(hints?.oauthProvider).toLowerCase();
-
   if (hints?.requestKind === 'responses-compact') {
     return ['responses'];
   }
@@ -135,12 +133,7 @@ function preferredEndpointOrder(
     return ['chat', 'messages', 'responses'];
   }
 
-  const base = ['chat', 'messages', 'responses'] as UpstreamEndpoint[];
-  if (oauthProvider === 'codex' && base.includes('responses')) {
-    return ['responses', ...base.filter((endpoint) => endpoint !== 'responses')];
-  }
-
-  return base;
+  return ['chat', 'messages', 'responses'];
 }
 
 export async function resolveUpstreamEndpointCandidates(
@@ -248,15 +241,6 @@ export async function resolveUpstreamEndpointCandidates(
       ...preferredWithCapabilities.filter((endpoint): endpoint is UpstreamEndpoint => endpoint !== 'responses'),
     ]
     : preferredWithCapabilities;
-  const forceMessagesFirstForClaudeModel = (
-    downstreamFormat === 'openai'
-    && preferMessagesForClaudeModel
-    && sitePlatform !== 'openai'
-    && sitePlatform !== 'gemini'
-    && sitePlatform !== 'antigravity'
-    && sitePlatform !== 'gemini-cli'
-  );
-
   try {
     const catalog = await fetchModelPricingCatalog({
       site: {
@@ -282,14 +266,6 @@ export async function resolveUpstreamEndpointCandidates(
     );
     if (!matched) return finalizeCandidates(prioritizedPreferredEndpoints);
 
-    const shouldIgnoreCatalogOrderingForClaudeMessages = (
-      preferMessagesForClaudeModel
-      && (downstreamFormat !== 'responses' || sitePlatform !== 'openai')
-    );
-    if (shouldIgnoreCatalogOrderingForClaudeMessages) {
-      return finalizeCandidates(prioritizedPreferredEndpoints);
-    }
-
     const supportedRaw = Array.isArray(matched.supportedEndpointTypes) ? matched.supportedEndpointTypes : [];
     const normalizedSupportedRaw = supportedRaw
       .map((item) => asTrimmedString(item).toLowerCase())
@@ -304,10 +280,6 @@ export async function resolveUpstreamEndpointCandidates(
       || raw === 'completions'
       || raw === 'responses'
     ));
-    if (forceMessagesFirstForClaudeModel && !hasConcreteEndpointHint) {
-      return finalizeCandidates(prioritizedPreferredEndpoints);
-    }
-
     const supported = new Set<UpstreamEndpoint>();
     for (const endpoint of supportedRaw) {
       const normalizedList = normalizeEndpointTypes(endpoint);

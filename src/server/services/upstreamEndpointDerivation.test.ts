@@ -45,7 +45,7 @@ describe('upstreamEndpointDerivation', () => {
     expect(order).toEqual(['responses']);
   });
 
-  it('derives codex oauth openai requests as responses-first without surface-local reordering', async () => {
+  it('derives codex oauth openai requests as same-protocol-first without surface-local reordering', async () => {
     const order = await resolveUpstreamEndpointCandidates(
       baseContext,
       'gpt-5.3',
@@ -57,10 +57,10 @@ describe('upstreamEndpointDerivation', () => {
       },
     );
 
-    expect(order).toEqual(['responses', 'chat', 'messages']);
+    expect(order).toEqual(['chat', 'responses', 'messages']);
   });
 
-  it('keeps explicit openai platforms on responses-first ordering even for claude-family models', async () => {
+  it('keeps explicit openai platforms on same-protocol-first ordering even for claude-family models', async () => {
     const order = await resolveUpstreamEndpointCandidates(
       {
         ...baseContext,
@@ -73,7 +73,7 @@ describe('upstreamEndpointDerivation', () => {
       'openai',
     );
 
-    expect(order).toEqual(['responses', 'chat', 'messages']);
+    expect(order).toEqual(['chat', 'responses', 'messages']);
   });
 
   it('keeps antigravity non-gemini compatibility requests on messages-first ordering', async () => {

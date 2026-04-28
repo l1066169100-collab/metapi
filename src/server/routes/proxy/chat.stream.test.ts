@@ -2725,7 +2725,7 @@ describe('chat proxy stream behavior', () => {
     expect(targetUrl).toContain('/v1/messages');
   });
 
-  it('does not stick generic /v1/responses traffic to /v1/messages after a fallback success', async () => {
+  it('does not stick generic /v1/responses traffic to /v1/messages after an explicit fallback success', async () => {
     selectChannelMock.mockReturnValue({
       channel: { id: 11, routeId: 22 },
       site: { name: 'generic-site', url: 'https://upstream.example.com', platform: 'new-api' },
@@ -2737,15 +2737,15 @@ describe('chat proxy stream behavior', () => {
 
     fetchMock
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        error: { message: 'Gateway time-out', type: 'upstream_error' },
+        error: { message: 'Not Found', type: 'not_found_error' },
       }), {
-        status: 504,
+        status: 404,
         headers: { 'content-type': 'application/json' },
       }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        error: { message: 'Bad gateway', type: 'upstream_error' },
+        error: { message: 'Not Found', type: 'not_found_error' },
       }), {
-        status: 502,
+        status: 404,
         headers: { 'content-type': 'application/json' },
       }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -3503,7 +3503,7 @@ describe('chat proxy stream behavior', () => {
     expect(targetUrl).toContain('/v1/chat/completions');
   });
 
-  it('falls back from /v1/responses to /v1/messages on openai platform when responses endpoint is unavailable', async () => {
+  it('falls back from /v1/chat/completions to /v1/responses on openai platform when chat endpoint is unavailable', async () => {
     selectChannelMock.mockReturnValue({
       channel: { id: 11, routeId: 22 },
       site: { name: 'openai-site', url: 'https://api.openai.com', platform: 'openai' },
@@ -3521,11 +3521,18 @@ describe('chat proxy stream behavior', () => {
         headers: { 'content-type': 'application/json' },
       }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        id: 'msg_openai_fallback_messages',
-        type: 'message',
+        id: 'resp_openai_fallback_responses',
+        object: 'response',
         model: 'claude-opus-4-6',
-        content: [{ type: 'text', text: 'fallback to messages completed' }],
-        stop_reason: 'end_turn',
+        status: 'completed',
+        output_text: 'fallback to responses completed',
+        output: [{
+          id: 'msg_openai_fallback_responses',
+          type: 'message',
+          role: 'assistant',
+          status: 'completed',
+          content: [{ type: 'output_text', text: 'fallback to responses completed' }],
+        }],
         usage: { input_tokens: 5, output_tokens: 3, total_tokens: 8 },
       }), {
         status: 200,
@@ -3546,8 +3553,8 @@ describe('chat proxy stream behavior', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [firstUrl] = fetchMock.mock.calls[0] as [string, any];
     const [secondUrl] = fetchMock.mock.calls[1] as [string, any];
-    expect(firstUrl).toContain('/v1/responses');
-    expect(secondUrl).toContain('/v1/chat/completions');
+    expect(firstUrl).toContain('/v1/chat/completions');
+    expect(secondUrl).toContain('/v1/responses');
   });
 
   it('does not fall back from /v1/chat/completions on generic 502 upstream failures', async () => {
@@ -3585,7 +3592,7 @@ describe('chat proxy stream behavior', () => {
     expect(firstUrl).toContain('/v1/chat/completions');
 
     const body = response.json();
-    expect(body?.error?.message).toContain('Cloudflare 502: Bad gateway');
+    expect(body?.error?.message).toContain('Cloudflare 502:');
   });
 
   it('stops after the first failed protocol when cross protocol fallback is disabled', async () => {
@@ -4747,7 +4754,7 @@ describe('chat proxy stream behavior', () => {
     expect(targetUrl).toContain('/v1/messages');
   });
 
-  it('prefers Messages endpoint for claude-family models when catalog uses generic openai/anthropic labels', async () => {
+  it('keeps Chat Completions first for claude-family models when catalog only uses generic openai/anthropic labels', async () => {
     fetchModelPricingCatalogMock.mockResolvedValue({
       models: [
         {
@@ -4759,12 +4766,15 @@ describe('chat proxy stream behavior', () => {
     });
 
     fetchMock.mockResolvedValue(new Response(JSON.stringify({
-      id: 'msg-claude-first',
-      type: 'message',
+      id: 'chatcmpl-claude-same-protocol',
+      object: 'chat.completion',
       model: 'upstream-gpt',
-      content: [{ type: 'text', text: 'hello from messages endpoint' }],
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 5, output_tokens: 3, total_tokens: 8 },
+      choices: [{
+        index: 0,
+        message: { role: 'assistant', content: 'hello from chat endpoint' },
+        finish_reason: 'stop',
+      }],
+      usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 },
     }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -4782,11 +4792,11 @@ describe('chat proxy stream behavior', () => {
 
     expect(response.statusCode).toBe(200);
     const body = response.json();
-    expect(body?.choices?.[0]?.message?.content).toContain('hello from messages endpoint');
+    expect(body?.choices?.[0]?.message?.content).toContain('hello from chat endpoint');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [targetUrl] = fetchMock.mock.calls[0] as [string, any];
-    expect(targetUrl).toContain('/v1/messages');
+    expect(targetUrl).toContain('/v1/chat/completions');
   });
 
   it('falls back to /v1/messages when catalog only declares openai and chat endpoint fails', async () => {
